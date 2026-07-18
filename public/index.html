@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GotchaFinder - Freelance Contract Auditor</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- PDF.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --bg-drawer: rgba(15, 23, 42, 0.95);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      
+      --risk-high: #f43f5e;
+      --risk-medium: #fbbf24;
+      --risk-low: #38bdf8;
+      --risk-safe: #34d399;
+      
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      
+      --font: 'Outfit', sans-serif;
+      --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --radius: 12px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header & Settings Drawer */
+    header {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #6366f1, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand span {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .settings-btn {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 350px;
+      height: 100vh;
+      background: var(--bg-drawer);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-left: 1px solid var(--border-color);
+      padding: 2.5rem 2rem;
+      transform: translateX(100%);
+      transition: var(--transition);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+
+    .drawer-header h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: var(--transition);
+    }
+
+    .close-btn:hover {
+      color: var(--text-main);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .form-group input {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      color: var(--text-main);
+      font-family: var(--font);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: var(--text-main);
+      border: none;
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 600;
+      font-family: var(--font);
+      transition: var(--transition);
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: rgba(244, 63, 94, 0.1);
+      color: var(--risk-high);
+      border: 1px solid rgba(244, 63, 94, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(244, 63, 94, 0.2);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      padding: 1.5rem;
+      gap: 1.5rem;
+      height: calc(100vh - 70px);
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .left-panel {
+      flex: 3;
+    }
+
+    .right-panel {
+      flex: 2;
+    }
+
+    .panel-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.2);
+    }
+
+    .panel-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* File Dropzone & Text Panel */
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .dropzone {
+      border: 2px dashed rgba(99, 102, 241, 0.3);
+      background: rgba(99, 102, 241, 0.02);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      text-align: center;
+      cursor: pointer;
+      height: 100%;
+      transition: var(--transition);
+      gap: 1rem;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .dropzone svg {
+      width: 48px;
+      height: 48px;
+      color: var(--text-muted);
+      transition: var(--transition);
+    }
+
+    .dropzone:hover svg {
+      color: var(--accent);
+      transform: translateY(-4px);
+    }
+
+    .dropzone-text h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .dropzone-text p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .hidden-file-input {
+      display: none;
+    }
+
+    .contract-viewer {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: var(--font);
+      font-size: 1rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+
+    .contract-html-view {
+      display: none;
+      font-family: var(--font);
+      font-size: 1rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    /* Highlight style */
+    mark.highlight-risk {
+      background: rgba(244, 63, 94, 0.35);
+      border-bottom: 2px solid var(--risk-high);
+      color: inherit;
+      padding: 0.1rem 0;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline;
+    }
+
+    mark.highlight-risk:hover {
+      background: rgba(244, 63, 94, 0.5);
+    }
+
+    @keyframes pulse-glow {
+      0% { background: rgba(244, 63, 94, 0.4); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
+      70% { background: rgba(244, 63, 94, 0.6); box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+      100% { background: rgba(244, 63, 94, 0.4); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+    }
+
+    mark.highlight-risk.active {
+      animation: pulse-glow 1.5s ease-out infinite;
+      outline: 2px solid var(--risk-high);
+      border-radius: 4px;
+      padding: 0.1rem 0.3rem;
+    }
+
+    /* Analysis Panel */
+    .analysis-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+
+    .analysis-placeholder svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.5;
+    }
+
+    .analysis-placeholder h3 {
+      font-size: 1.1rem;
+      color: var(--text-main);
+    }
+
+    .analysis-container {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Loading State */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 1.5rem;
+      text-align: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-state h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .loading-state p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    /* Risk Cards */
+    .risk-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--risk-low);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      transition: var(--transition);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .risk-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .risk-card.High {
+      border-left-color: var(--risk-high);
+    }
+
+    .risk-card.Medium {
+      border-left-color: var(--risk-medium);
+    }
+
+    .risk-card.Low {
+      border-left-color: var(--risk-low);
+    }
+
+    .risk-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .risk-category {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .risk-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .risk-badge.High {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--risk-high);
+      border: 1px solid rgba(244, 63, 94, 0.2);
+    }
+
+    .risk-badge.Medium {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--risk-medium);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .risk-badge.Low {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--risk-low);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .risk-summary {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-top: 0.25rem;
+      line-height: 1.4;
+    }
+
+    .risk-body {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      line-height: 1.5;
+    }
+
+    .risk-quote {
+      background: rgba(0, 0, 0, 0.2);
+      border-left: 2px solid rgba(255, 255, 255, 0.15);
+      padding: 0.6rem 0.8rem;
+      font-style: italic;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      border-radius: 4px;
+    }
+
+    .risk-strategy {
+      background: rgba(52, 211, 153, 0.04);
+      border-left: 2px solid var(--risk-safe);
+      padding: 0.6rem 0.8rem;
+      font-size: 0.825rem;
+      color: #a7f3d0;
+      border-radius: 4px;
+    }
+
+    /* Responsive Controls */
+    .actions-bar {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .action-icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .action-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      <h1>GotchaFinder</h1>
+      <span>SaaS Platform</span>
+    </div>
+    
+    <button class="settings-btn" id="openSettingsBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      Account
+    </button>
+  </header>
+
+  <!-- Settings/Account Drawer -->
+  <div class="drawer" id="settingsDrawer">
+    <div class="drawer-header">
+      <h2 id="drawerTitle">Account Portal</h2>
+      <button class="close-btn" id="closeSettingsBtn">&times;</button>
+    </div>
+    
+    <!-- Authenticated Profile View -->
+    <div id="profileView" style="display: none; flex-direction: column; gap: 1.5rem; height: 100%;">
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius); display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Logged In As</div>
+        <div id="userEmailDisplay" style="font-size: 0.95rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">user@example.com</div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 1rem; border-radius: var(--radius); display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Subscription Status</div>
+        <div id="subscriptionStatusDisplay" style="font-size: 1.1rem; font-weight: 700; color: var(--risk-low);">Checking Status...</div>
+      </div>
+      
+      <button class="btn" id="upgradeBtn" style="display: none; background: linear-gradient(to right, #6366f1, #a855f7);">Upgrade to Premium ($9/mo)</button>
+      
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.75rem;">
+        <button class="btn btn-secondary" id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+
+    <!-- Unauthenticated Auth View -->
+    <div id="authView" style="display: flex; flex-direction: column; gap: 1.25rem;">
+      <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5;">
+        Sign in to unlock unlimited contract analysis and premium risk audits.
+      </div>
+      
+      <div class="form-group">
+        <label for="authEmail">Email Address</label>
+        <input type="email" id="authEmail" placeholder="you@example.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" placeholder="••••••••">
+      </div>
+      
+      <button class="btn" id="emailSignInBtn">Sign In</button>
+      <button class="btn btn-secondary" id="emailSignUpBtn" style="background: transparent; color: var(--text-main); border-color: var(--border-color);">Create Account</button>
+      
+      <div style="display: flex; align-items: center; text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 0.5rem 0;">
+        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+        <span style="padding: 0 10px;">OR</span>
+        <div style="flex: 1; border-bottom: 1px solid var(--border-color);"></div>
+      </div>
+      
+      <button class="btn btn-secondary" id="googleSignInBtn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #fff; color: #1f2937;">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22c-.87-2.6-2.86-4.53-5.84-4.53z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Sign In with Google
+      </button>
+    </div>
+  </div>
+
+  <!-- Dashboard Main Panels -->
+  <main>
+    <!-- Left Panel: Contract Document Viewer -->
+    <div class="panel left-panel">
+      <div class="panel-header">
+        <h2 id="leftPanelTitle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Contract Document
+        </h2>
+        <div class="actions-bar" id="viewerActions" style="display: none;">
+          <button class="btn" id="analyzeBtn" style="padding: 0.35rem 1rem; font-size: 0.85rem;">Analyze Contract</button>
+          <button class="action-icon-btn" id="resetBtn" title="Reset Viewer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <polyline points="3 3 3 8 8 8"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="panel-content" id="leftPanelContent">
+        <!-- Drag & Drop Dropzone -->
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div class="dropzone-text">
+            <h3>Drag & drop your contract here</h3>
+            <p>Supports .txt, .md, or .pdf files</p>
+            <button class="btn" id="loadDemoBtn" style="margin-top: 1rem; padding: 0.4rem 1rem; font-size: 0.85rem; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8;">Load Demo Contract</button>
+          </div>
+          <input type="file" id="fileInput" class="hidden-file-input" accept=".txt,.md,.pdf">
+        </div>
+
+        <!-- Scrollable contract text editor/viewer -->
+        <textarea class="contract-viewer" id="contractViewer" style="display: none;" placeholder="Or paste your contract text here..."></textarea>
+        <!-- HTML-based highlighted display view -->
+        <div class="contract-html-view" id="contractHtmlView"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Auditor & Gotchas -->
+    <div class="panel right-panel">
+      <div class="panel-header">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Auditor Findings
+        </h2>
+      </div>
+      
+      <div class="panel-content">
+        <!-- Placeholder View -->
+        <div class="analysis-placeholder" id="analysisPlaceholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <h3>Upload a contract to scan for risks</h3>
+          <p>We'll analyze the document local-first for clauses that might put you at a disadvantage.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState">
+          <div class="spinner"></div>
+          <h3>Analyzing Legalese...</h3>
+          <p>Scanning for indemnity, payments, and IP clauses...</p>
+        </div>
+
+        <!-- Rendered Findings Analysis -->
+        <div class="analysis-container" id="analysisContainer">
+          <!-- Categorized findings will be injected here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Demo Contract Text
+    const demoContract = `FREELANCE SERVICES AGREEMENT
+
+This Freelance Services Agreement ("Agreement") is entered into as of January 1, 2026, by and between Awesome Client Inc. ("Client") and John Doe ("Contractor").
+
+1. SERVICES AND COMPENSATION
+The Contractor agrees to perform software development services as detailed in Exhibit A.
+All compensation will be paid within ninety (90) days (Net-90) from receipt of a valid invoice. No interest or late fees shall accrue on late payments. Client reserves the right to withhold payments in the event of any billing dispute.
+
+2. INTELLECTUAL PROPERTY RIGHTS
+Contractor agrees that all deliverables, designs, code, patterns, patents, and work product created prior to or during the term of this Agreement shall be considered "Work Made for Hire" and shall be the sole and exclusive property of the Client. Contractor assigns all rights, titles, and interests in any such work to Client, including Contractor's pre-existing software libraries used in the deliverables.
+
+3. INDEMNITY & LIABILITY
+Contractor shall defend, indemnify, and hold harmless Client, its officers, and employees from any and all claims, liabilities, losses, damages, or costs (including attorney fees) arising from the services performed.
+Contractor's liability under this Agreement shall be unlimited. Client's liability for any breach of this contract shall be limited to a maximum of $100.
+
+4. TERM & TERMINATION
+This Agreement shall commence on the Effective Date and continue until completed.
+Client may terminate this Agreement immediately at any time for convenience upon written notice to Contractor. Contractor may terminate this Agreement only upon ninety (90) days prior written notice, and must transfer all incomplete work products to Client immediately upon notice.`;
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "fake-api-key-for-emulator-or-client-config",
+      authDomain: "gotchafinder-prod.firebaseapp.com",
+      projectId: "gotchafinder-prod",
+      storageBucket: "gotchafinder-prod.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Use emulator if running locally
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      auth.useEmulator('http://localhost:9099');
+      db.useEmulator('localhost', 8080);
+    }
+
+    // Global State
+    window.contractText = "";
+    let currentUser = null;
+    let isSubscribed = false;
+
+    // DOM Elements
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const settingsDrawer = document.getElementById('settingsDrawer');
+    
+    // Auth & Profile Views DOM
+    const authView = document.getElementById('authView');
+    const profileView = document.getElementById('profileView');
+    const authEmailInput = document.getElementById('authEmail');
+    const authPasswordInput = document.getElementById('authPassword');
+    const emailSignInBtn = document.getElementById('emailSignInBtn');
+    const emailSignUpBtn = document.getElementById('emailSignUpBtn');
+    const googleSignInBtn = document.getElementById('googleSignInBtn');
+    const userEmailDisplay = document.getElementById('userEmailDisplay');
+    const subscriptionStatusDisplay = document.getElementById('subscriptionStatusDisplay');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const loadDemoBtn = document.getElementById('loadDemoBtn');
+    const contractViewer = document.getElementById('contractViewer');
+    const contractHtmlView = document.getElementById('contractHtmlView');
+    const leftPanelTitle = document.getElementById('leftPanelTitle');
+    const viewerActions = document.getElementById('viewerActions');
+    const resetBtn = document.getElementById('resetBtn');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const loadingState = document.getElementById('loadingState');
+    const analysisPlaceholder = document.getElementById('analysisPlaceholder');
+    const analysisContainer = document.getElementById('analysisContainer');
+
+    // UI Helpers: Settings Drawer Toggle
+    openSettingsBtn.addEventListener('click', () => settingsDrawer.classList.add('open'));
+    closeSettingsBtn.addEventListener('click', () => settingsDrawer.classList.remove('open'));
+
+    // Firebase Auth State Listener
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user) {
+        // Logged In
+        authView.style.display = 'none';
+        profileView.style.display = 'flex';
+        userEmailDisplay.textContent = user.email;
+        
+        // Listen to Firestore document updates for subscription
+        db.collection('users').doc(user.uid).onSnapshot(doc => {
+          if (doc.exists && doc.data().subscribed) {
+            isSubscribed = true;
+            subscriptionStatusDisplay.textContent = 'Active Premium';
+            subscriptionStatusDisplay.style.color = 'var(--risk-safe)';
+            upgradeBtn.style.display = 'none';
+          } else {
+            isSubscribed = false;
+            subscriptionStatusDisplay.textContent = 'Free Account';
+            subscriptionStatusDisplay.style.color = 'var(--risk-medium)';
+            upgradeBtn.style.display = 'block';
+          }
+        }, err => {
+          console.error("Error fetching user data:", err);
+          isSubscribed = false;
+          subscriptionStatusDisplay.textContent = 'Free Account';
+          subscriptionStatusDisplay.style.color = 'var(--risk-medium)';
+          upgradeBtn.style.display = 'block';
+        });
+      } else {
+        // Logged Out
+        authView.style.display = 'flex';
+        profileView.style.display = 'none';
+        isSubscribed = false;
+      }
+    });
+
+    // Email Sign In
+    emailSignInBtn.addEventListener('click', async () => {
+      const email = authEmailInput.value.trim();
+      const password = authPasswordInput.value;
+      if (!email || !password) return alert('Please enter email and password.');
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        alert('Welcome back!');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Email Sign Up
+    emailSignUpBtn.addEventListener('click', async () => {
+      const email = authEmailInput.value.trim();
+      const password = authPasswordInput.value;
+      if (!email || !password) return alert('Please enter email and password.');
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        alert('Account created successfully!');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Google Sign In
+    googleSignInBtn.addEventListener('click', async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await auth.signInWithPopup(provider);
+        alert('Signed in with Google!');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Sign Out
+    signOutBtn.addEventListener('click', () => {
+      auth.signOut();
+      alert('Signed out successfully.');
+    });
+
+    // Upgrade Subscription (Stripe Checkout)
+    upgradeBtn.addEventListener('click', async () => {
+      if (!currentUser) return alert('Please sign in to upgrade.');
+      
+      upgradeBtn.disabled = true;
+      const initialText = upgradeBtn.textContent;
+      upgradeBtn.textContent = 'Launching Checkout...';
+
+      let checkoutUrl = '/createCheckoutSession';
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        checkoutUrl = 'http://localhost:5001/gotchafinder-prod/us-central1/createCheckoutSession';
+      }
+
+      try {
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch(checkoutUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error('Stripe URL missing from response.');
+        }
+      } catch (err) {
+        alert('Could not start checkout: ' + err.message);
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = initialText;
+      }
+    });
+
+    // Step 1.3: Drag-and-Drop and File Reading
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // Step 3.1: Add Demo Contract Button Action
+    loadDemoBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent opening the file upload dialog
+      showText(demoContract, 'Demo Freelance Contract.txt');
+    });
+
+    function handleFile(file) {
+      const name = file.name;
+      const extension = name.substring(name.lastIndexOf('.')).toLowerCase();
+      
+      if (extension === '.txt' || extension === '.md') {
+        const reader = new FileReader();
+        reader.onload = (e) => showText(e.target.result, name);
+        reader.readAsText(file);
+      } else if (extension === '.pdf') {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const text = await extractTextFromPDF(e.target.result);
+            showText(text, name);
+          } catch (err) {
+            alert('Error parsing PDF: ' + err.message);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        alert('Unsupported file format. Please upload .txt, .md, or .pdf.');
+      }
+    }
+
+    function showText(text, filename) {
+      window.contractText = text;
+      dropzone.style.display = 'none';
+      contractHtmlView.style.display = 'none';
+      contractViewer.style.display = 'block';
+      contractViewer.value = text;
+      viewerActions.style.display = 'flex';
+      leftPanelTitle.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        </svg>
+        ${filename}
+      `;
+    }
+
+    // Step 1.4: Client-Side PDF Parsing using PDF.js
+    async function extractTextFromPDF(pdfArrayBuffer) {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      
+      const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str);
+        fullText += strings.join(' ') + '\n';
+      }
+      return fullText;
+    }
+
+    // Reset Viewer Event
+    resetBtn.addEventListener('click', () => {
+      window.contractText = "";
+      contractViewer.value = "";
+      contractViewer.style.display = 'none';
+      contractHtmlView.style.display = 'none';
+      dropzone.style.display = 'flex';
+      viewerActions.style.display = 'none';
+      leftPanelTitle.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        </svg>
+        Contract Document
+      `;
+      analysisPlaceholder.style.display = 'flex';
+      analysisContainer.style.display = 'none';
+      loadingState.style.display = 'none';
+    });
+
+    // Step 2.1: Add "Analyze Contract" Trigger & Loader
+    analyzeBtn.addEventListener('click', analyzeContract);
+
+    async function analyzeContract() {
+      // 1. Enforce Free Scan Limit if not logged in / not premium
+      if (!currentUser) {
+        const scans = parseInt(localStorage.getItem('gotcha_free_scans') || '0', 10);
+        if (scans >= 1) {
+          alert('You have used your 1 free trial audit. Please sign up or log in to check more contracts.');
+          settingsDrawer.classList.add('open');
+          return;
+        }
+      } else {
+        if (!isSubscribed) {
+          alert('Please upgrade to Premium to scan more contracts.');
+          settingsDrawer.classList.add('open');
+          return;
+        }
+      }
+
+      const text = contractViewer.value.trim();
+      if (!text) {
+        alert('Please drop or paste a contract first.');
+        return;
+      }
+
+      // Update state for loading
+      analysisPlaceholder.style.display = 'none';
+      analysisContainer.style.display = 'none';
+      loadingState.style.display = 'flex';
+      analyzeBtn.disabled = true;
+      resetBtn.disabled = true;
+
+      // Determine API Endpoint (use localhost emulator if local)
+      let apiUrl = '/analyze';
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        apiUrl = 'http://localhost:5001/gotchafinder-prod/us-central1/analyze';
+      }
+
+      // Setup Headers (include Auth Token if logged in)
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (currentUser) {
+        try {
+          const idToken = await currentUser.getIdToken();
+          headers['Authorization'] = `Bearer ${idToken}`;
+        } catch (tokenErr) {
+          alert('Authentication error: ' + tokenErr.message);
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        window.analysisResults = result.findings || [];
+        
+        // 2. Increment trial scan count if unauthenticated and audit succeeds
+        if (!currentUser) {
+          const scans = parseInt(localStorage.getItem('gotcha_free_scans') || '0', 10);
+          localStorage.setItem('gotcha_free_scans', scans + 1);
+        }
+
+        renderFindings(window.analysisResults);
+        highlightContractText(text, window.analysisResults);
+        
+        loadingState.style.display = 'none';
+        analysisContainer.style.display = 'flex';
+      } catch (err) {
+        alert('Analysis failed: ' + err.message);
+        loadingState.style.display = 'none';
+        analysisPlaceholder.style.display = 'flex';
+      } finally {
+        analyzeBtn.disabled = false;
+        resetBtn.disabled = false;
+      }
+    }
+
+    // Step 2.3 & 3.2: Render Categorized Risk Cards & Interaction
+    function renderFindings(findings) {
+      analysisContainer.innerHTML = '';
+      
+      if (!findings || findings.length === 0) {
+        analysisContainer.innerHTML = `
+          <div style="text-align: center; color: var(--risk-safe); padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <h3>No significant risks found!</h3>
+            <p>This contract looks exceptionally clean.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      findings.forEach((finding, index) => {
+        const card = document.createElement('div');
+        card.className = `risk-card ${finding.riskLevel}`;
+        card.dataset.index = index;
+        
+        card.innerHTML = `
+          <div class="risk-header-row">
+            <span class="risk-category">${escapeHtml(finding.category)}</span>
+            <span class="risk-badge ${finding.riskLevel}">${finding.riskLevel} Risk</span>
+          </div>
+          <div class="risk-summary">${escapeHtml(finding.summary)}</div>
+          <div class="risk-body" style="display: none;">
+            <div class="risk-quote"><strong>Clause:</strong> "${escapeHtml(finding.originalText)}"</div>
+            <div class="risk-strategy"><strong>Negotiation Strategy:</strong> ${escapeHtml(finding.explanation)}</div>
+          </div>
+        `;
+        
+        card.addEventListener('click', () => {
+          const body = card.querySelector('.risk-body');
+          const isVisible = body.style.display === 'flex';
+          
+          // Collapse other card bodies
+          document.querySelectorAll('.risk-body').forEach(el => el.style.display = 'none');
+          body.style.display = isVisible ? 'none' : 'flex';
+
+          // Highlight matching mark tag in left pane
+          document.querySelectorAll('mark.highlight-risk').forEach(m => m.classList.remove('active'));
+          if (!isVisible) {
+            const mark = contractHtmlView.querySelector(`mark.highlight-risk[data-index="${index}"]`);
+            if (mark) {
+              mark.classList.add('active');
+              mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+        
+        analysisContainer.appendChild(card);
+      });
+    }
+
+    // Step 3.2 & 3.3: Implement Text Snippet Highlighting & Scroll Into View
+    function highlightContractText(text, findings) {
+      let html = escapeHtml(text);
+      
+      // Sort findings by originalText length descending to prevent shorter matches inside 
+      // longer matches from breaking tags
+      const sortedFindings = [...findings]
+        .map((f, i) => ({ ...f, originalIndex: i }))
+        .sort((a, b) => (b.originalText?.length || 0) - (a.originalText?.length || 0));
+
+      sortedFindings.forEach((finding) => {
+        const original = finding.originalText;
+        if (!original) return;
+        
+        const escapedOriginal = escapeHtml(original);
+        const escapedRegex = escapeRegExp(escapedOriginal);
+        
+        // Match outside of HTML tags
+        const regex = new RegExp(`(${escapedRegex})(?![^<>]*>)`, 'gi');
+        html = html.replace(regex, `<mark class="highlight-risk" data-index="${finding.originalIndex}">$1</mark>`);
+      });
+      
+      contractHtmlView.innerHTML = html;
+      contractViewer.style.display = 'none';
+      contractHtmlView.style.display = 'block';
+      
+      // Hook up mark click events back to finding cards
+      contractHtmlView.querySelectorAll('mark.highlight-risk').forEach(mark => {
+        mark.addEventListener('click', () => {
+          const index = mark.dataset.index;
+          const card = document.querySelector(`.risk-card[data-index="${index}"]`);
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Expand card body
+            const body = card.querySelector('.risk-body');
+            document.querySelectorAll('.risk-body').forEach(el => el.style.display = 'none');
+            body.style.display = 'flex';
+            
+            // Active highlight styling
+            document.querySelectorAll('mark.highlight-risk').forEach(m => m.classList.remove('active'));
+            mark.classList.add('active');
+          }
+        });
+      });
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Initialize Page
+    loadApiKey();
+  </script>
+</body>
+</html>

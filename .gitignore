@@ -1,0 +1,7 @@
+# Standalone GotchaFinder Git Exclusions
+node_modules/
+functions/node_modules/
+.env
+functions/.env
+.firebase/
+.firebaserc.local
